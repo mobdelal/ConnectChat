@@ -1,1 +1,30 @@
-/* You can add global styles to this file, and also import other style files */
+
+
+html, body { height: 100%; }
+body { margin: 0; font-family: Roboto, "Helvetica Neue", sans-serif; }
+html,
+body {
+    height: 100%; /* Important for flex container */
+    margin: 0;
+    padding: 0;
+    font-family: 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    color: #212529;
+    background-color: #f0f2f5;
+
+    display: flex; /* Make body a flex container */
+    flex-direction: column; /* Stack children vertically */
+    min-height: 100vh; /* Ensure body takes at least full viewport height */
+}
+@media (max-width: 991.98px) {
+    body.chat-area-active-on-mobile .your-main-header-selector { /* <--- CHANGE THIS */
+      display: none !important;
+    }
+    body.chat-area-active-on-mobile .your-chat-list-sidebar-selector { /* <--- AND THIS (if applicable) */
+      display: none !important;
+    }
+    body.chat-area-active-on-mobile .your-chat-area-selector { /* <--- AND THIS (if applicable) */
+      display: block !important;
+      width: 100%;
+    }
+  }
+  @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap');

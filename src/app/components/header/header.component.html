@@ -1,0 +1,394 @@
+<header class="app-header">
+  <div class="left-section">
+    <span class="app-name">
+      <span class="con">Con</span>
+      <span class="nect">nect</span>
+    </span>
+    <img
+      src="../../../assets/images/chat-logo.jpeg"
+      alt="Connect Chat App Logo"
+      class="app-logo"
+    />
+  </div>
+
+  <div class="middle-section">
+    <div class="search-container">
+      <input
+        type="text"
+        placeholder="Search for users..."
+        class="search-input"
+        [(ngModel)]="searchTerm"
+        (ngModelChange)="onSearchInputChange()"
+        (focus)="onSearchFocus()"
+      />
+      <button class="search-button" aria-label="Search">
+        <i class="bi bi-search"></i>
+      </button>
+
+      <div
+        *ngIf="showSearchResults"
+        class="search-results-dropdown"
+        #searchResultsDropdown
+        (scroll)="onSearchResultsScroll($event)"
+      >
+        <div
+          *ngIf="isLoadingSearch && searchResults.length === 0"
+          class="search-loading"
+        >
+          <i class="bi bi-arrow-clockwise spin"></i> Searching users...
+        </div>
+        <div
+          *ngIf="
+            !isLoadingSearch &&
+            searchResults.length === 0 &&
+            searchTerm.trim().length >= 2 &&
+            allUsersLoaded
+          "
+          class="no-results"
+        >
+          No users found for "{{ searchTerm }}"
+        </div>
+        <div
+          *ngIf="searchTerm.trim().length < 2 && !isLoadingSearch"
+          class="no-results"
+        >
+          Type at least 2 characters to search.
+        </div>
+        <ul *ngIf="searchResults.length > 0" class="results-list">
+          <li
+            *ngFor="let user of searchResults"
+            (click)="onUserClick(user)"
+            class="result-item"
+          >
+            <img
+              [src]="
+                user.avatarUrl
+                  ? imageBaseUrl + user.avatarUrl
+                  : 'assets/default-avatar.png'
+              "
+              alt="{{ user.username }}"
+              class="result-avatar"
+            />
+            <span class="result-username">{{ user.username }}</span>
+            <span
+              class="result-status"
+              [class.online]="user.isOnline"
+              [class.offline]="!user.isOnline"
+            >
+              {{ user.isOnline ? "Online" : "Offline" }}
+            </span>
+            <button
+              class="message-icon-button"
+              (click)="startOneOnOneChat(user)"
+              title="Start Chatting"
+            >
+              <i class="bi bi-chat-left-text"></i>
+            </button>
+          </li>
+        </ul>
+        <div *ngIf="isLoadingMoreUsers" class="search-loading loading-more">
+          <i class="bi bi-arrow-clockwise spin"></i> Loading more...
+        </div>
+        <div
+          *ngIf="
+            !isLoadingMoreUsers && allUsersLoaded && searchResults.length > 0
+          "
+          class="no-more-results"
+        >
+          No more users to load.
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="right-section">
+    <button
+      class="profile-button"
+      aria-label="Edit Profile"
+      (click)="openProfileModal()"
+    >
+      <img
+        *ngIf="currentUserDetails"
+        [src]="
+          currentUserDetails.avatarUrl
+            ? imageBaseUrl + currentUserDetails.avatarUrl
+            : 'assets/default-avatar.png'
+        "
+        [alt]="
+          currentUserDetails.username
+            ? currentUserDetails.username + ' profile picture'
+            : 'Profile picture'
+        "
+        class="profile-avatar"
+      />
+      <i
+        *ngIf="!currentUserDetails || !currentUserDetails.avatarUrl"
+        class="bi bi-person-circle"
+      ></i>
+    </button>
+
+    <button
+      class="logout-button"
+      aria-label="Logout"
+      (click)="onLogout()"
+      title="Logout"
+    >
+      <i class="bi bi-box-arrow-right"></i> </button>
+    </div>
+</header>
+
+<div *ngIf="showProfileModal" class="modal-overlay">
+  <div class="modal-content">
+    <div class="modal-tabs">
+      <button
+        class="tab-button"
+        [class.active]="activeTab === 'profile'"
+        (click)="setActiveTab('profile')"
+      >
+        <i class="bi bi-person"></i>
+        <span>Profile</span>
+      </button>
+      <button
+        class="tab-button"
+        [class.active]="activeTab === 'password'"
+        (click)="setActiveTab('password')"
+      >
+        <i class="bi bi-lock"></i>
+        <span>Password</span>
+      </button>
+      <button
+        class="tab-button"
+        [class.active]="activeTab === 'blocked-rejected'"
+        (click)="setActiveTab('blocked-rejected')"
+      >
+        <i class="bi bi-ban"></i>
+        <span>Blocked Users</span>
+      </button>
+      <button class="close-button" (click)="closeProfileModal()">
+        &times;
+      </button>
+    </div>
+
+    <div class="modal-body">
+      <div *ngIf="activeTab === 'profile'" class="tab-content">
+        <form (ngSubmit)="onUpdateProfile()">
+          <div class="form-group">
+            <label for="username">Username</label>
+            <div class="input-icon-wrapper">
+              <i class="bi bi-person"></i>
+              <input
+                type="text"
+                id="username"
+                name="username"
+                [(ngModel)]="editProfileForm.username"
+                required
+                placeholder="Enter your username"
+              />
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label>Avatar</label>
+            <div class="avatar-upload-container">
+              <div class="avatar-preview">
+                <img
+                  [src]="currentAvatarPreviewUrl"
+                  alt="Current Avatar"
+                  class="current-avatar-preview"
+                />
+                <div class="avatar-overlay">
+                  <i class="bi bi-camera"></i>
+                </div>
+              </div>
+              <label for="avatarFile" class="avatar-upload-label">
+                <span class="upload-text">Choose Image</span>
+                <input
+                  type="file"
+                  id="avatarFile"
+                  name="avatarFile"
+                  (change)="onAvatarFileSelected($event)"
+                  accept="image/*"
+                />
+              </label>
+            </div>
+          </div>
+
+          <div class="form-group checkbox-group">
+            <label class="checkbox-container">
+              <input
+                type="checkbox"
+                id="notifications"
+                name="notifications"
+                [(ngModel)]="editProfileForm.receiveNotifications"
+              />
+              <span class="checkmark"></span>
+              Receive Notifications
+            </label>
+          </div>
+
+          <div *ngIf="profileUpdateMessage" class="message success-message">
+            <i class="bi bi-check-circle"></i>
+            {{ profileUpdateMessage }}
+          </div>
+          <div *ngIf="profileUpdateError" class="message error-message">
+            <i class="bi bi-exclamation-circle"></i>
+            {{ profileUpdateError }}
+          </div>
+
+          <div class="modal-footer-buttons">
+            <button type="submit" class="btn save-btn">
+              <i class="bi bi-check-lg"></i> Save Changes
+            </button>
+          </div>
+        </form>
+      </div>
+
+      <div *ngIf="activeTab === 'password'" class="tab-content">
+        <form (ngSubmit)="onChangePassword()">
+          <div class="form-group password-input-container">
+            <label for="currentPassword">Current Password</label>
+            <div class="input-icon-wrapper">
+              <i class="bi bi-key"></i>
+              <input
+                [type]="showCurrentPassword ? 'text' : 'password'"
+                id="currentPassword"
+                name="currentPassword"
+                [(ngModel)]="changePasswordForm.currentPassword"
+                required
+                placeholder="Enter current password"
+              />
+              <span
+                class="password-toggle"
+                (click)="toggleCurrentPasswordVisibility()"
+              >
+                <i
+                  class="bi"
+                  [class.bi-eye]="!showCurrentPassword"
+                  [class.bi-eye-slash]="showCurrentPassword"
+                ></i>
+              </span>
+            </div>
+          </div>
+
+          <div class="form-group password-input-container">
+            <label for="newPassword">New Password</label>
+            <div class="input-icon-wrapper">
+              <i class="bi bi-key-fill"></i>
+              <input
+                [type]="showNewPassword ? 'text' : 'password'"
+                id="newPassword"
+                name="newPassword"
+                [(ngModel)]="changePasswordForm.newPassword"
+                required
+                placeholder="Enter new password"
+              />
+              <span
+                class="password-toggle"
+                (click)="toggleNewPasswordVisibility()"
+              >
+                <i
+                  class="bi"
+                  [class.bi-eye]="!showNewPassword"
+                  [class.bi-eye-slash]="showNewPassword"
+                ></i>
+              </span>
+            </div>
+          </div>
+
+          <div class="form-group password-input-container">
+            <label for="confirmNewPassword">Confirm New Password</label>
+            <div class="input-icon-wrapper">
+              <i class="bi bi-key-fill"></i>
+              <input
+                [type]="showConfirmNewPassword ? 'text' : 'password'"
+                id="confirmNewPassword"
+                name="confirmNewPassword"
+                [(ngModel)]="changePasswordForm.confirmNewPassword"
+                required
+                placeholder="Confirm new password"
+              />
+              <span
+                class="password-toggle"
+                (click)="toggleConfirmNewPasswordVisibility()"
+              >
+                <i
+                  class="bi"
+                  [class.bi-eye]="!showConfirmNewPassword"
+                  [class.bi-eye-slash]="showConfirmNewPassword"
+                ></i>
+              </span>
+            </div>
+          </div>
+          <div *ngIf="passwordUpdateMessage" class="message success-message">
+            <i class="bi bi-check-circle"></i>
+            {{ passwordUpdateMessage }}
+          </div>
+          <div *ngIf="passwordUpdateError" class="message error-message">
+            <i class="bi bi-exclamation-circle"></i>
+            {{ passwordUpdateError }}
+          </div>
+
+          <div class="modal-footer-buttons">
+            <button type="submit" class="btn save-btn">
+              <i class="bi bi-arrow-repeat"></i> Change Password
+            </button>
+          </div>
+        </form>
+      </div>
+
+      <div
+        *ngIf="activeTab === 'blocked-rejected'"
+        class="tab-content blocked-rejected-tab"
+      >
+        <h3 class="tab-section-title">
+          <i class="bi bi-person-slash"></i> Blocked Users ({{
+            totalBlockedUsers
+          }})
+        </h3>
+        <div
+          class="list-container"
+          #blockedUsersList
+          (scroll)="onBlockedListScroll($event)"
+        >
+          <div *ngIf="blockedUsers.length === 0 && !isLoadingBlockedUsers">
+            <p class="no-results-message">No blocked users found.</p>
+          </div>
+          <div *ngFor="let user of blockedUsers" class="list-item user-item">
+            <img
+              [src]="
+                user.avatarUrl
+                  ? imageBaseUrl + user.avatarUrl
+                  : 'assets/default-avatar.png'
+              "
+              alt="Avatar"
+              class="avatar"
+            />
+            <div class="item-details">
+              <span class="item-name">{{ user.username }}</span>
+              <span class="item-date"
+                >Blocked at: {{ user.blockedAt | date : "short" }}</span
+              >
+            </div>
+            <button
+              class="btn btn-sm action-btn unblock-btn"
+              (click)="unblockUser(user.userId)"
+            >
+              <i class="bi bi-unlock"></i> Unblock
+            </button>
+          </div>
+          <div *ngIf="isLoadingBlockedUsers" class="loading-spinner-container">
+            <div class="spinner-border text-primary" role="status">
+              <span class="sr-only">Loading...</span>
+            </div>
+          </div>
+          <div
+            *ngIf="blockedUsersAllLoaded && blockedUsers.length > 0"
+            class="no-more-results-message"
+          >
+            <p>You've reached the end of the list.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

@@ -1,0 +1,1267 @@
+<app-header *ngIf="isVisible"></app-header>
+<div id="root">
+  <div class="flex chat-container">
+    <div
+      class="d-flex flex-column border-end chat-sidebar"
+      [class.d-none-mobile]="isChatAreaVisibleOnMobile"
+    >
+      <div class="p-3 bg-light border-bottom chat-list-header">
+        <div class="d-flex align-items-center justify-content-between mb-3">
+          <h2 class="chat-heading mb-0">Chats</h2>
+          <button
+            (click)="onNewChat()"
+            class="btn btn-light rounded-circle addo"
+            aria-label="New Chat"
+            title="New Chat"
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="20"
+              height="20"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.5"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              viewBox="0 0 24 24"
+            >
+              <path d="M12 4.5v15m7.5-7.5h-15" />
+            </svg>
+          </button>
+        </div>
+
+        <div class="position-relative">
+          <i
+            class="bi bi-search position-absolute top-50 start-1 translate-middle-y text-muted"
+            style="left: 0.75rem"
+          ></i>
+          <input
+            type="text"
+            [(ngModel)]="searchTerm"
+            (ngModelChange)="onChatSearchTermChange()"
+            placeholder="Search conversations"
+            class="form-control ps-5 py-2 search-input"
+          />
+        </div>
+      </div>
+      <div
+        class="flex-grow-1 overflow-auto chat-list-scroll"
+        #chatListScrollContainer
+        (scroll)="onMainChatListScroll($event)"
+      >
+        <div
+          *ngFor="let chat of filteredChats()"
+          (click)="selectChat(chat.id)"
+          class="d-flex align-items-center p-3 chat-item"
+          [class.bg-light]="chat.id === activeChat?.id"
+          [class.unread-chat]="chat.unreadCount > 0"
+        >
+          <img
+            [src]="
+              chat.avatarUrl
+                ? imageBaseUrl + chat.avatarUrl
+                : 'assets/default-avatar.png'
+            "
+            [alt]="chat.name"
+            class="rounded-circle me-3"
+            style="width: 48px; height: 48px; object-fit: cover"
+          />
+          <div class="flex-grow-1 text-truncate">
+            <div class="d-flex justify-content-between align-items-center mb-1">
+              <h3 class="mb-0 fs-6 text-truncate">{{ chat.name }}</h3>
+              <div class="d-flex align-items-center">
+                <span
+                  *ngIf="chat.unreadCount > 0"
+                  class="badge bg-danger rounded-pill me-2 unread-badge"
+                >
+                  {{ chat.unreadCount }}
+                </span>
+                <small class="text-muted text-nowrap">
+                  {{
+                    (chat.lastMessage?.sentAt | date : "shortTime") ??
+                      (chat.createdAt | date : "shortTime")
+                  }}
+                </small>
+              </div>
+            </div>
+            <p class="mb-0 text-truncate text-muted small">
+              {{
+                chat.lastMessage
+                  ? chat.lastMessage.content ||
+                    (chat.lastMessage.attachments.length > 0
+                      ? "Attachment"
+                      : "")
+                  : "No messages yet"
+              }}
+            </p>
+          </div>
+        </div>
+
+        <div *ngIf="loading" class="text-center p-2 text-muted">Loading...</div>
+
+        <div
+          *ngIf="!isSearching && allLoaded && chats.length > 0"
+          class="text-center p-2 text-muted"
+        >
+          No more chats.
+        </div>
+
+        <div
+          *ngIf="
+            isSearching &&
+            allChatSearchResultsLoaded &&
+            searchResults.length > 0 &&
+            searchTerm.trim().length >= 2
+          "
+          class="text-center p-2 text-muted"
+        >
+          No more search results.
+        </div>
+
+        <div
+          *ngIf="
+            isSearching &&
+            searchResults.length === 0 &&
+            searchTerm.trim().length >= 2 &&
+            !loading
+          "
+          class="no-results text-center p-2 text-muted"
+        >
+          No chats found for "{{ searchTerm }}"
+        </div>
+      </div>
+    </div>
+
+    <div
+      class="d-flex flex-column flex-grow-1 chat-area"
+      [class.d-none-mobile]="!isChatAreaVisibleOnMobile"
+    >
+      <ng-container *ngIf="isLoadingChat">
+        <div
+          class="d-flex flex-grow-1 align-items-center justify-content-center bg-light"
+        >
+          <div class="text-center">
+            <div
+              class="spinner-border text-primary"
+              role="status"
+              style="width: 3rem; height: 3rem"
+            >
+              <span class="visually-hidden">Loading chat...</span>
+            </div>
+            <p class="mt-3 text-muted">Loading chat...</p>
+          </div>
+        </div>
+      </ng-container>
+
+      <ng-container *ngIf="activeChat; else noChatTemplate">
+        <div
+          class="p-3 bg-light border-bottom d-flex align-items-center chat-header"
+          (click)="handleChatHeaderClick()"
+        >
+          <div class="d-flex align-items-center">
+            <button
+              type="button"
+              class="btn btn-light rounded-circle p-2 me-3 d-lg-none custom-back-button"
+              (click)="backToChatList(); $event.stopPropagation()"
+              aria-label="Back to Chats"
+              title="Back to Chats"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="24"
+                height="24"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                class="feather feather-arrow-left"
+              >
+                <line x1="19" y1="12" x2="5" y2="12"></line>
+                <polyline points="12 19 5 12 12 5"></polyline>
+              </svg>
+            </button>
+
+            <img
+              [src]="
+                activeChat.avatarUrl
+                  ? imageBaseUrl + activeChat.avatarUrl
+                  : 'assets/default-group-avatar.png'
+              "
+              [alt]="activeChat.name"
+              class="rounded-circle me-3"
+              style="width: 40px; height: 40px; object-fit: cover"
+            />
+            <h5 class="chat-subheading mb-0">{{ activeChat.name }}</h5>
+          </div>
+        </div>
+
+        <div *ngIf="showOneOnOneChatInfoModal" class="modal-overlay">
+          <div class="modal-content">
+            <div class="modal-tabs">
+              <button class="tab-button active">
+                <i class="bi bi-person"></i>
+                <span>Contact Info</span>
+              </button>
+              <button
+                class="close-button"
+                (click)="closeOneOnOneChatInfoModal()"
+              >
+                &times;
+              </button>
+            </div>
+
+            <div class="modal-body">
+              <div class="tab-content group-info-non-admin">
+                <div class="info-item avatar-display">
+                  <img
+                    [src]="
+                      otherParticipant?.avatarUrl
+                        ? imageBaseUrl + otherParticipant?.avatarUrl
+                        : 'assets/default-avatar.png'
+                    "
+                    alt="Contact Avatar"
+                    class="group-info-avatar"
+                  />
+                </div>
+                <div class="info-item">
+                  <strong>Username:</strong>
+                  <span>{{ otherParticipant?.username }}</span>
+                </div>
+
+                <div class="modal-footer-buttons">
+                  <button
+                    *ngIf="!isOtherUserBlocked"
+                    class="btn block-btn"
+                    (click)="blockUser(otherParticipant?.userId)"
+                  >
+                    <i class="bi bi-slash-circle"></i> Block User
+                  </button>
+                  <button
+                    *ngIf="isOtherUserBlocked"
+                    class="btn unblock-btn"
+                    (click)="unblockUser(otherParticipant?.userId)"
+                  >
+                    <i class="bi bi-check-circle"></i> Unblock User
+                  </button>
+
+                  <button
+                    *ngIf="activeChat && currentUserId"
+                    class="btn mute-btn"
+                    (click)="toggleMuteStatus(activeChat.id, currentUserId)"
+                  >
+                    <i
+                      class="bi"
+                      [class.bi-volume-mute]="activeChat.isMutedForCurrentUser"
+                      [class.bi-volume-up]="!activeChat.isMutedForCurrentUser"
+                    ></i>
+                    {{
+                      activeChat.isMutedForCurrentUser
+                        ? "Unmute Chat"
+                        : "Mute Chat"
+                    }}
+                  </button>
+                </div>
+
+                <div
+                  *ngIf="blockUnblockMessage"
+                  class="message success-message"
+                >
+                  <i class="bi bi-check-circle"></i>
+                  {{ blockUnblockMessage }}
+                </div>
+                <div *ngIf="blockUnblockError" class="message error-message">
+                  <i class="bi bi-exclamation-circle"></i>
+                  {{ blockUnblockError }}
+                </div>
+                <div *ngIf="muteStatusMessage" class="message success-message">
+                  <i class="bi bi-check-circle"></i>
+                  {{ muteStatusMessage }}
+                </div>
+                <div *ngIf="muteStatusError" class="message error-message">
+                  <i class="bi bi-exclamation-circle"></i>
+                  {{ muteStatusError }}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div *ngIf="showChatUpdateModal" class="modal-overlay">
+          <div class="modal-content">
+            <div class="modal-tabs">
+              <button
+                class="tab-button"
+                [class.active]="activeChatUpdateTab === 'info'"
+                (click)="setActiveChatUpdateTab('info')"
+              >
+                <i class="bi bi-info-circle"></i>
+                <span>Group Info</span>
+              </button>
+              <button
+                class="tab-button"
+                [class.active]="activeChatUpdateTab === 'members'"
+                (click)="setActiveChatUpdateTab('members')"
+              >
+                <i class="bi bi-people"></i>
+                <span
+                  >Members
+                  {{
+                    activeChat.isGroup
+                      ? "(" + (activeChat.participants.length || 0) + ")"
+                      : ""
+                  }}</span
+                >
+              </button>
+              <button class="close-button" (click)="closeChatUpdateModal()">
+                &times;
+              </button>
+            </div>
+
+            <div class="modal-body">
+              <div *ngIf="activeChatUpdateTab === 'info'" class="tab-content">
+                <form
+                  *ngIf="
+                    activeChat &&
+                    (activeChat.isGroup
+                      ? isCurrentUserChatAdmin(activeChat)
+                      : isCurrentUserChatCreator(activeChat))
+                  "
+                  (ngSubmit)="onUpdateChat()"
+                >
+                  <div class="form-group">
+                    <label for="chatName">Group Name</label>
+                    <div class="input-icon-wrapper">
+                      <i class="bi bi-chat-dots"></i>
+                      <input
+                        type="text"
+                        id="chatName"
+                        name="chatName"
+                        [(ngModel)]="editChatForm.name"
+                        required
+                        placeholder="Enter group name"
+                      />
+                    </div>
+                  </div>
+
+                  <div class="form-group">
+                    <label>Group Avatar</label>
+                    <div class="avatar-upload-container">
+                      <div class="avatar-preview">
+                        <img
+                          [src]="currentChatAvatarPreviewUrl"
+                          alt="Current Group Avatar"
+                          class="current-avatar-preview"
+                        />
+                        <div class="avatar-overlay">
+                          <i class="bi bi-camera"></i>
+                        </div>
+                      </div>
+                      <label for="chatAvatarFile" class="avatar-upload-label">
+                        <span class="upload-text">Choose Image</span>
+                        <input
+                          type="file"
+                          id="chatAvatarFile"
+                          name="chatAvatarFile"
+                          (change)="onChatAvatarFileSelected($event)"
+                          accept="image/*"
+                        />
+                      </label>
+                    </div>
+                  </div>
+
+                  <div
+                    *ngIf="chatUpdateMessage"
+                    class="message success-message"
+                  >
+                    <i class="bi bi-check-circle"></i>
+                    {{ chatUpdateMessage }}
+                  </div>
+                  <div *ngIf="chatUpdateError" class="message error-message">
+                    <i class="bi bi-exclamation-circle"></i>
+                    {{ chatUpdateError }}
+                  </div>
+
+                  <div class="modal-footer-buttons">
+                    <button type="submit" class="btn save-btn">
+                      <i class="bi bi-check-lg"></i> Save Changes
+                    </button>
+                  </div>
+                </form>
+
+                <div
+                  *ngIf="
+                    !activeChat ||
+                    (activeChat.isGroup
+                      ? !isCurrentUserChatAdmin(activeChat)
+                      : !isCurrentUserChatCreator(activeChat))
+                  "
+                  class="tab-content group-info-non-admin"
+                >
+                  <div class="info-item avatar-display">
+                    <img
+                      [src]="
+                        activeChat.avatarUrl
+                          ? imageBaseUrl + activeChat.avatarUrl
+                          : 'assets/default-avatar.png'
+                      "
+                      alt="Chat Avatar"
+                      class="group-info-avatar"
+                    />
+                  </div>
+                  <div class="info-item">
+                    <strong>Name:</strong>
+                    <span>{{ activeChat.name }}</span>
+                  </div>
+                  <div class="info-item">
+                    <strong>Created At:</strong>
+                    <span>{{ formatDate(activeChat.createdAt) }}</span>
+                  </div>
+                  <div *ngIf="activeChat?.isGroup" class="info-item">
+                    <strong>Group Creator:</strong>
+                    <span>{{ chatCreatorUsername }}</span>
+                  </div>
+                </div>
+
+                <div class="modal-footer-buttons mt-3">
+                  <button
+                    *ngIf="activeChat && currentUserId"
+                    class="btn mute-btn"
+                    (click)="toggleMuteStatus(activeChat.id, currentUserId)"
+                    [attr.data-tooltip]="
+                      activeChat.isMutedForCurrentUser ? 'Unmute' : 'Mute'
+                    "
+                  >
+                    <i
+                      [class]="
+                        activeChat.isMutedForCurrentUser
+                          ? 'bi bi-volume-mute'
+                          : 'bi bi-volume-up'
+                      "
+                    ></i>
+                    <span>{{
+                      activeChat.isMutedForCurrentUser
+                        ? "Unmute Group"
+                        : "Mute Group"
+                    }}</span>
+                  </button>
+
+                  <button
+                    *ngIf="activeChat?.isGroup"
+                    class="btn leave-btn"
+                    (click)="leaveGroupChat(activeChat.id, currentUserId)"
+                  >
+                    <i class="bi bi-box-arrow-right"></i>
+                    <span>Leave Group</span>
+                  </button>
+
+                  <button
+                    *ngIf="
+                      activeChat?.isGroup && isCurrentUserChatAdmin(activeChat)
+                    "
+                    class="btn delete-btn"
+                    (click)="deleteChat(activeChat.id, currentUserId)"
+                  >
+                    <i class="bi bi-trash"></i> <span>Delete Group</span>
+                  </button>
+                </div>
+
+                <div *ngIf="muteStatusMessage" class="message success-message">
+                  <i class="bi bi-check-circle"></i>
+                  {{ muteStatusMessage }}
+                </div>
+                <div *ngIf="muteStatusError" class="message error-message">
+                  <i class="bi bi-exclamation-circle"></i>
+                  {{ muteStatusError }}
+                </div>
+                <div *ngIf="leaveGroupMessage" class="message success-message">
+                  <i class="bi bi-check-circle"></i>
+                  {{ leaveGroupMessage }}
+                </div>
+                <div *ngIf="leaveGroupError" class="message error-message">
+                  <i class="bi bi-exclamation-circle"></i>
+                  {{ leaveGroupError }}
+                </div>
+                <div *ngIf="deleteChatMessage" class="message success-message">
+                  <i class="bi bi-check-circle"></i>
+                  {{ deleteChatMessage }}
+                </div>
+                <div *ngIf="deleteChatError" class="message error-message">
+                  <i class="bi bi-exclamation-circle"></i>
+                  {{ deleteChatError }}
+                </div>
+              </div>
+
+              <div
+                *ngIf="activeChatUpdateTab === 'members'"
+                class="tab-content blocked-rejected-tab"
+              >
+                <h3 class="tab-section-title">
+                  <i class="bi bi-people-fill"></i> Group Members ({{
+                    activeChat.participants.length || 0
+                  }})
+                </h3>
+                <div class="list-container">
+                  <div *ngIf="activeChat?.participants?.length === 0">
+                    <p class="no-results-message">No members in this group.</p>
+                  </div>
+                  <div
+                    *ngFor="let participant of activeChat?.participants"
+                    class="list-item user-item"
+                  >
+                    <img
+                      [src]="
+                        participant.avatarUrl
+                          ? imageBaseUrl + participant.avatarUrl
+                          : 'assets/default-avatar.png'
+                      "
+                      alt="Avatar"
+                      class="avatar"
+                    />
+                    <div class="item-details">
+                      <span class="item-name">{{ participant.username }}</span>
+                      <span
+                        *ngIf="activeChat?.isGroup && participant.isAdmin"
+                        class="badge bg-primary ms-2"
+                        >Admin</span
+                      >
+                      <span
+                        *ngIf="participant.userId === currentUserId"
+                        class="badge bg-secondary ms-2"
+                        >You</span
+                      >
+                      <span
+                        *ngIf="
+                          activeChat?.isGroup &&
+                          activeChat?.createdByUserId === participant.userId
+                        "
+                        class="badge bg-info ms-2"
+                        >Creator</span
+                      >
+                    </div>
+
+                    <button
+                      *ngIf="
+                        activeChat?.isGroup &&
+                        canRemoveMember(participant.userId)
+                      "
+                      class="btn btn-sm action-btn unblock-btn"
+                      (click)="removeMember(participant.userId)"
+                      title="Remove Member"
+                    >
+                      <i class="bi bi-person-x"></i> Remove
+                    </button>
+                  </div>
+                </div>
+
+                <div
+                  *ngIf="
+                    activeChat?.isGroup && isCurrentUserChatAdmin(activeChat)
+                  "
+                  class="form-group"
+                  style="margin-top: 20px"
+                >
+                  <label for="addMemberSearch">Add New Members</label>
+                  <div class="input-icon-wrapper">
+                    <i class="bi bi-search"></i>
+                    <input
+                      type="text"
+                      id="addMemberSearch"
+                      name="addMemberSearch"
+                      [(ngModel)]="addMemberSearchTerm"
+                      (input)="onAddMemberSearchTermChange()"
+                      placeholder="Search users to add..."
+                      autocomplete="off"
+                    />
+                  </div>
+
+                  <div
+                    class="user-search-results mt-2"
+                    #addMemberSearchScrollContainer
+                    (scroll)="onAddMemberSearchScroll($event)"
+                  >
+                    <div *ngIf="isSearchingAddMembers" class="text-center py-2">
+                      <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                      </div>
+                    </div>
+                    <div
+                      *ngIf="
+                        addMemberSearchTerm.trim() === '' &&
+                        searchAddMembersResults.length === 0 &&
+                        !isSearchingAddMembers
+                      "
+                      class="text-center py-2 text-muted"
+                    >
+                      Start typing to search for users not currently in this
+                      chat.
+                    </div>
+                    <div
+                      *ngIf="
+                        searchAddMembersResults.length === 0 &&
+                        addMemberSearchTerm.trim() !== '' &&
+                        !isSearchingAddMembers &&
+                        allAddMembersLoaded
+                      "
+                      class="text-center py-2 text-muted"
+                    >
+                      No users found matching "{{ addMemberSearchTerm }}".
+                    </div>
+
+                    <div
+                      *ngFor="let user of searchAddMembersResults"
+                      class="user-search-item"
+                    >
+                      <img
+                        [src]="getUserAvatar(user)"
+                        alt="{{ user.username }}"
+                        class="user-avatar"
+                      />
+                      <div class="user-details">
+                        <div class="username">{{ user.username }}</div>
+                      </div>
+                      <button
+                        type="button"
+                        class="btn btn-sm btn-outline-primary ms-auto"
+                        (click)="addMemberToChat(user.id)"
+                        [disabled]="
+                          isMemberAlreadyInChat(user.id) || isAddingMember
+                        "
+                      >
+                        <span
+                          *ngIf="isAddingMember && userToAddId === user.id"
+                          class="spinner-border spinner-border-sm me-2"
+                          role="status"
+                          aria-hidden="true"
+                        ></span>
+                        {{ isMemberAlreadyInChat(user.id) ? "Added" : "Add" }}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div
+          class="flex-grow-1 p-3 overflow-auto bg-white chat-messages-container"
+          #scrollContainer
+          (scroll)="onScroll($event)"
+        >
+          <div *ngIf="loadingMessages" class="text-center py-2 text-muted">
+            Loading older messages...
+          </div>
+          <div
+            *ngIf="allMessagesLoaded"
+            class="text-center py-2 text-muted small"
+          >
+            No older messages
+          </div>
+
+          <div *ngFor="let message of activeChat?.messages">
+            <div *ngIf="message.isSystemMessage" class="system-message my-2">
+              <p class="mb-0">{{ message.content }}</p>
+              <span class="message-time">{{
+                message.sentAt | date : "shortTime"
+              }}</span>
+            </div>
+
+            <div
+              *ngIf="!message.isSystemMessage"
+              class="d-flex mb-2 message-container"
+              [class.justify-content-end]="message.senderId === currentUserId"
+              (mouseenter)="onMessageHover(message.id)"
+              (mouseleave)="onMessageLeave()"
+            >
+              <img
+                *ngIf="
+                  activeChat?.isGroup && message.senderId !== currentUserId
+                "
+                [src]="
+                  message.senderAvatarUrl
+                    ? imageBaseUrl + message.senderAvatarUrl
+                    : 'assets/default-avatar.png'
+                "
+                [alt]="message.senderUsername"
+                class="rounded-circle me-2 flex-shrink-0 message-avatar"
+                style="width: 32px; height: 32px; object-fit: cover"
+              />
+
+              <div class="message-content-wrapper d-flex flex-column">
+                <div
+                  class="message-bubble p-2 rounded-3 position-relative"
+                  [class.bg-primary]="message.senderId === currentUserId"
+                  [class.text-white]="message.senderId === currentUserId"
+                  [class.bg-light]="message.senderId !== currentUserId"
+                  [class.ms-auto]="message.senderId === currentUserId"
+                  [class.me-auto]="message.senderId !== currentUserId"
+                >
+                  <div
+                    *ngIf="
+                      activeChat?.isGroup && message.senderId !== currentUserId
+                    "
+                    class="fw-bold small text-muted mb-1"
+                  >
+                    {{ message.senderUsername }}
+                  </div>
+
+                  <ng-container *ngIf="editingMessageId !== message.id">
+                    <p class="mb-0" *ngIf="message.content">
+                      {{ message.content }}
+                    </p>
+
+                    <div
+                      class="message-actions position-absolute top-0 end-0 p-1 bg-light rounded-pill shadow-sm"
+                      [class.show-actions]="
+                        hoveredMessageId === message.id ||
+                        showEmojiPickerForMessageId === message.id
+                      "
+                    >
+                      <button
+                        class="btn btn-sm btn-outline-secondary py-0 px-1"
+                        [class.me-1]="
+                          (message.senderId === currentUserId &&
+                            !message.isSystemMessage &&
+                            !(
+                              message.attachments &&
+                              message.attachments.length > 0
+                            )) ||
+                          message.senderId === currentUserId ||
+                          isCurrentUserChatAdmin(activeChat)
+                        "
+                        (click)="toggleEmojiPickerForMessage(message.id)"
+                        title="Add Reaction"
+                      >
+                        <i class="bi bi-emoji-smile"></i>
+                      </button>
+
+                      <button
+                        *ngIf="
+                          message.senderId === currentUserId &&
+                          !message.isSystemMessage &&
+                          !(
+                            message.attachments &&
+                            message.attachments.length > 0
+                          )
+                        "
+                        class="btn btn-sm btn-outline-secondary py-0 px-1"
+                        [class.me-1]="
+                          message.senderId === currentUserId ||
+                          isCurrentUserChatAdmin(activeChat)
+                        "
+                        (click)="startEditMessage(message)"
+                        title="Edit message"
+                      >
+                        <i class="bi bi-pencil"></i>
+                      </button>
+
+                      <button
+                        *ngIf="
+                          message.senderId === currentUserId ||
+                          isCurrentUserChatAdmin(activeChat)
+                        "
+                        class="btn btn-sm btn-outline-danger py-0 px-1"
+                        (click)="onDeleteMessage(message)"
+                        title="Delete message"
+                      >
+                        <i class="bi bi-trash"></i>
+                      </button>
+                    </div>
+                  </ng-container>
+
+                  <ng-container *ngIf="editingMessageId === message.id">
+                    <div class="message-edit-popup">
+                      <textarea
+                        [(ngModel)]="editedMessageContent"
+                        (keydown.enter)="
+                          saveEditedMessage(message); $event.preventDefault()
+                        "
+                        (keydown.escape)="cancelEditMessage()"
+                        class="form-control mb-2"
+                        rows="2"
+                      ></textarea>
+                      <div class="d-flex justify-content-end">
+                        <button
+                          class="btn btn-sm btn-secondary me-2"
+                          (click)="cancelEditMessage()"
+                        >
+                          Cancel
+                        </button>
+                        <button
+                          class="btn btn-sm btn-primary"
+                          (click)="saveEditedMessage(message)"
+                        >
+                          Save
+                        </button>
+                      </div>
+                    </div>
+                  </ng-container>
+
+                  <div
+                    *ngIf="
+                      showEmojiPickerForMessageId === message.id &&
+                      editingMessageId !== message.id
+                    "
+                    class="emoji-picker mt-1"
+                  >
+                    <span
+                      *ngFor="let emoji of availableEmojis; let i = index"
+                      (click)="addReaction(message, emoji)"
+                      class="emoji-option"
+                      role="button"
+                      attr.aria-label="React with {{ emoji }}"
+                      title="Press {{ i + 1 }} to react with {{ emoji }}"
+                    >
+                      {{ emoji }}
+                    </span>
+                  </div>
+
+                  <div
+                    class="message-timestamp small text-end mt-1"
+                    [class.text-white-50]="message.senderId === currentUserId"
+                    [class.text-muted]="message.senderId !== currentUserId"
+                  >
+                    {{ message.sentAt | date : "shortTime" }}
+                    <span *ngIf="message.editedAt" class="ms-1">(edited)</span>
+                  </div>
+                </div>
+                <div
+                  *ngIf="message.reactions && message.reactions.length > 0"
+                  class="message-reactions-display mt-1"
+                  [class.ms-auto]="message.senderId === currentUserId"
+                  [class.me-auto]="
+                    message.senderId !== currentUserId && !activeChat.isGroup
+                  "
+                  [class.ms-0]="
+                    activeChat.isGroup && message.senderId !== currentUserId
+                  "
+                  [class.mt-0]="true"
+                >
+                  <div
+                    *ngFor="
+                      let reactionGroup of getGroupedReactions(message);
+                      let i = index
+                    "
+                    class="reaction-group"
+                    [ngClass]="{
+                      'reacted-by-current-user':
+                        reactionGroup.reactedByCurrentUser
+                    }"
+                    (click)="addReaction(message, reactionGroup.emoji)"
+                    [attr.data-index]="i"
+                    [title]="getReactionTooltip(reactionGroup.users)"
+                  >
+                    <span class="emoji">{{ reactionGroup.emoji }}</span>
+                    <span class="count">{{ reactionGroup.count }}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div
+            *ngIf="getTypingUsersForActiveChat().length > 0"
+            class="typing-indicator-container mt-2"
+          >
+            <div class="typing-users-list">
+              <ng-container *ngFor="let user of getTypingUsersForActiveChat()">
+                <div class="typing-user-item">
+                  <div class="typing-avatar-wrapper">
+                    <img
+                      [src]="
+                        user.avatarUrl
+                          ? imageBaseUrl + user.avatarUrl
+                          : 'assets/default-avatar.png'
+                      "
+                      alt="{{ user.username }}"
+                      class="typing-avatar rounded-circle"
+                    />
+                    <div class="online-indicator"></div>
+                  </div>
+
+                  <div class="typing-bubble">
+                    <span class="dot-animation dot1"></span>
+                    <span class="dot-animation dot2"></span>
+                    <span class="dot-animation dot3"></span>
+                  </div>
+                </div>
+              </ng-container>
+            </div>
+          </div>
+        </div>
+
+        <div
+          *ngIf="activeChat.status !== ChatStatus.Active"
+          class="p-3 bg-light border-top text-center chat-status-area"
+          [ngSwitch]="activeChat.status"
+        >
+          <ng-container *ngSwitchCase="ChatStatus.Pending">
+            <ng-container
+              *ngIf="
+                isCurrentUserChatCreator(activeChat);
+                else pendingRecipient
+              "
+            >
+              <p class="text-muted mb-0">
+                Waiting for {{ getOtherParticipantUsername(activeChat) }} to
+                accept your chat invitation...
+              </p>
+            </ng-container>
+
+            <ng-template #pendingRecipient>
+              <p class="text-muted mb-3">
+                You have a pending chat invitation from
+                {{ getOtherParticipantUsername(activeChat) }}.
+              </p>
+              <button
+                type="button"
+                class="btn btn-success me-2"
+                (click)="acceptChat(activeChat.id)"
+              >
+                Accept Chat
+              </button>
+              <button
+                type="button"
+                class="btn btn-danger"
+                (click)="rejectChat(activeChat.id)"
+              >
+                Reject & block
+              </button>
+            </ng-template>
+          </ng-container>
+
+          <ng-container *ngSwitchCase="ChatStatus.Rejected">
+            <ng-container
+              *ngIf="
+                isCurrentUserRejectedInitiator(activeChat);
+                else currentUserRejectedRecipient
+              "
+            >
+              <p class="text-danger mb-0">
+                <i class="bi bi-x-circle-fill me-1"></i> This chat has been
+                rejected by {{ getOtherParticipantUsername(activeChat) }} and
+                you have been blocked. You cannot send messages.
+              </p>
+            </ng-container>
+            <ng-template #currentUserRejectedRecipient>
+              <p class="text-warning mb-0">
+                <i class="bi bi-exclamation-triangle-fill me-1"></i> You
+                rejected this chat and blocked
+                {{ getOtherParticipantUsername(activeChat) }}. To chat again,
+                you'll need to unblock this user.
+              </p>
+            </ng-template>
+          </ng-container>
+        </div>
+
+        <form
+          (ngSubmit)="handleSendMessage()"
+          class="p-3 border-top bg-white chat-input-area"
+          *ngIf="activeChat.status === ChatStatus.Active"
+        >
+          <div
+            *ngIf="attachments.length > 0"
+            class="attachment-preview-container mb-3 p-2 border rounded"
+          >
+            <div
+              *ngFor="let attachment of attachments"
+              class="d-flex align-items-center mb-2"
+            >
+              <ng-container
+                *ngIf="
+                  attachment.fileType?.startsWith('image/');
+                  else filePreview
+                "
+              >
+                <img
+                  [src]="attachment.fileUrl"
+                  class="img-thumbnail me-2"
+                  style="max-width: 80px; max-height: 80px; object-fit: contain"
+                />
+              </ng-container>
+              <ng-template #filePreview>
+                <i class="bi bi-file-earmark me-2" style="font-size: 2rem"></i>
+              </ng-template>
+
+              <div class="flex-grow-1">
+                <div
+                  class="small fw-bold text-truncate"
+                  style="max-width: 200px"
+                >
+                  {{ attachment.fileName }}
+                </div>
+                <div class="text-muted" style="font-size: 0.8rem">
+                  {{ attachment.fileType }}
+                </div>
+              </div>
+
+              <button
+                type="button"
+                class="btn btn-sm btn-outline-danger ms-2"
+                (click)="removeAttachment(attachment)"
+                aria-label="Remove attachment"
+              >
+                <i class="bi bi-x-lg"></i>
+              </button>
+            </div>
+          </div>
+
+          <div class="input-group">
+            <input
+              [(ngModel)]="sendMessageDto.content"
+              name="messageContent"
+              type="text"
+              class="form-control"
+              placeholder="Type a message..."
+              (input)="onMessageInput()"
+              #messageInput
+            />
+
+            <button
+              type="button"
+              class="btn btn-outline-secondary"
+              (click)="toggleEmojiPicker($event)"
+              aria-label="Open emoji picker"
+            >
+              <i class="bi bi-emoji-smile"></i>
+            </button>
+
+            <input
+              type="file"
+              class="form-control-file"
+              (change)="handleFileInput($event)"
+              style="display: none"
+              #fileInput
+              multiple
+            />
+            <button
+              type="button"
+              class="btn btn-outline-secondary"
+              (click)="fileInput.click()"
+              aria-label="Attach file"
+            >
+              <i class="bi bi-paperclip"></i>
+            </button>
+
+            <button
+              class="btn btn-success"
+              type="submit"
+              [disabled]="
+                !sendMessageDto.content?.trim() && attachments.length === 0
+              "
+            >
+              Send
+            </button>
+          </div>
+          <div *ngIf="showEmojiPicker" class="emoji-picker-container">
+            <div class="emoji-grid">
+              <button
+                *ngFor="let emoji of basicEmojis"
+                (click)="addEmoji(emoji)"
+                class="emoji-btn"
+                type="button"
+              >
+                {{ emoji }}
+              </button>
+            </div>
+          </div>
+        </form>
+      </ng-container>
+
+      <ng-template #noChatTemplate>
+        <div
+          *ngIf="!isLoadingChat"
+          class="d-flex flex-grow-1 align-items-center justify-content-center bg-light no-chat-selected"
+        >
+          <div class="text-center">
+            <svg
+              class="mb-3"
+              width="64"
+              height="64"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.5"
+              viewBox="0 0 24 24"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                d="M7 8h10M7 12h4m1 8a9 9 0 100-18 9 9 0 000 18z"
+              />
+            </svg>
+            <h4 class="text-secondary">No chat selected</h4>
+            <p class="text-muted">
+              Select a chat from the sidebar or start a new conversation
+            </p>
+          </div>
+        </div>
+      </ng-template>
+    </div>
+  </div>
+</div>
+
+<div *ngIf="showCreateChatForm" class="modal-overlay create-chat-modal">
+  <div class="modal-content">
+    <div class="modal-header">
+      <h5 class="modal-title">Create New Chat</h5>
+      <button
+        type="button"
+        class="btn-close"
+        (click)="onCloseModal()"
+        aria-label="Close"
+      ></button>
+    </div>
+
+    <form
+      (ngSubmit)="onCreateChatSubmit(createChatForm)"
+      #createChatForm="ngForm"
+      enctype="multipart/form-data"
+      class="modal-body"
+    >
+      <div class="mb-3">
+        <label for="chatName" class="form-label">Chat Name</label>
+        <input
+          type="text"
+          class="form-control"
+          id="chatName"
+          name="name"
+          [(ngModel)]="newChat.name"
+          placeholder="Enter chat name"
+        />
+      </div>
+
+      <div class="mb-3">
+        <label for="searchUsers" class="form-label">Add Participants</label>
+        <input
+          type="text"
+          class="form-control"
+          id="searchUsers"
+          name="searchUsers"
+          [(ngModel)]="searchUsersTerm"
+          (input)="onUserSearchTermChange()"
+          placeholder="Search for users by username or email"
+        />
+        <div class="form-text">Search for users to add to your chat.</div>
+
+        <div
+          class="user-search-results mt-2"
+          #userSearchScrollContainer
+          (scroll)="onUserSearchScroll($event)"
+        >
+          <div *ngIf="isSearchingUsers" class="text-center py-2">
+            <div class="spinner-border text-primary" role="status">
+              <span class="visually-hidden">Loading...</span>
+            </div>
+          </div>
+          <div
+            *ngIf="
+              searchUsersResults.length === 0 &&
+              searchUsersTerm.trim() !== '' &&
+              !isSearchingUsers &&
+              allUsersLoaded
+            "
+            class="text-center py-2 text-muted"
+          >
+            No users found matching "{{ searchUsersTerm }}".
+          </div>
+          <div
+            *ngIf="
+              searchUsersTerm.trim() === '' &&
+              searchUsersResults.length === 0 &&
+              !isSearchingUsers
+            "
+            class="text-center py-2 text-muted"
+          >
+            Start typing to search for users.
+          </div>
+
+          <div
+            *ngFor="let user of searchUsersResults"
+            class="user-search-item"
+            (click)="selectUserForChat(user)"
+          >
+            <img
+              [src]="getUserAvatar(user)"
+              alt="{{ user.username }}"
+              class="user-avatar"
+            />
+            <div class="user-details">
+              <div class="username">{{ user.username }}</div>
+            </div>
+            <button
+              type="button"
+              class="btn btn-sm btn-outline-primary ms-auto"
+            >
+              Add
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div
+        *ngIf="selectedParticipants.length > 0"
+        class="mb-3 selected-participants-list"
+      >
+        <h6>Selected Participants:</h6>
+        <div class="d-flex flex-wrap gap-2">
+          <div
+            *ngFor="let participant of selectedParticipants"
+            class="selected-participant-item"
+          >
+            <img
+              [src]="getUserAvatar(participant)"
+              alt="{{ participant.username }}"
+              class="user-avatar-small"
+            />
+            <span>{{ participant.username }}</span>
+            <button
+              type="button"
+              class="btn btn-sm btn-danger remove-btn"
+              (click)="removeSelectedUser(participant)"
+            >
+              &times;
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div class="mb-4">
+        <label for="avatar" class="form-label">Chat Avatar (Optional)</label>
+        <input
+          type="file"
+          class="form-control"
+          id="avatar"
+          (change)="onFileSelected($event)"
+          accept="image/*"
+        />
+        <div class="form-text">
+          Upload an image for your chat. Default will be used if none provided.
+        </div>
+      </div>
+
+      <div *ngIf="errorMessage" class="alert alert-danger mt-3" role="alert">
+        {{ errorMessage }}
+      </div>
+
+      <div class="modal-footer">
+        <button
+          type="button"
+          class="btn btn-outline-secondary"
+          (click)="onCloseModal()"
+        >
+          Cancel
+        </button>
+        <button type="submit" class="create-chat-button" [disabled]="loading">
+          <span
+            *ngIf="loading"
+            class="spinner-border spinner-border-sm me-2"
+            role="status"
+            aria-hidden="true"
+          ></span>
+          {{ loading ? "Creating..." : "Create Chat" }}
+        </button>
+      </div>
+    </form>
+  </div>
+</div>

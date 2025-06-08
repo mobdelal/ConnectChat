@@ -1,0 +1,138 @@
+/* Custom Bootstrap variables for shades of colors, if needed */
+/* These should ideally be defined in your main styles.scss or a theme file,
+   not directly in a component's CSS unless scoped intentionally. */
+   :root {
+    --bs-primary-light: #e6f2ff; /* Example light blue */
+    --bs-primary-medium: #cce0ff; /* Example medium blue */
+    --bs-accent-light: #e0f2f0; /* Example light teal/green */
+    /* If you don't define these, make sure your HTML uses standard Bootstrap colors */
+  }
+  
+  /* Custom gradient for the right section (features/marketing) */
+  .bg-gradient-to-br {
+    background-image: linear-gradient(
+      to bottom right,
+      var(--bs-primary-light, #f8f9fa) 0%,
+      var(--bs-primary-medium, #e9ecef) 70%,
+      var(--bs-accent-light, #d8e6f0) 100%
+    );
+    /* Using CSS variables with fallbacks to standard Bootstrap colors */
+  }
+  
+  /* Custom styles for avatar upload hover effect */
+  .hover-border-primary:hover {
+    border-color: var(--bs-primary) !important;
+  }
+  
+  /* Basic transition for hover effects */
+  .transition-colors {
+    transition: border-color 0.2s ease-in-out;
+  }
+  
+  /* Adjust font sizes or line heights if Bootstrap's defaults don't match exactly */
+  .line-height-base {
+    line-height: 1.6;
+  }
+  
+  /* Small negative margin for icons, useful for fine-tuning vertical alignment */
+  .mt-n1 {
+    margin-top: -0.25rem; /* Equivalent to -4px if 1rem=16px */
+  }
+  
+  /* --- Input and Icon Styling --- */
+  
+  .form-label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: 600;
+    color: var(--bs-body-color, #333); /* Use Bootstrap variable for text color */
+    font-size: 14px;
+  }
+  
+  .input-icon-wrapper {
+    position: relative;
+    display: flex; /* Ensures the input and potential toggle icon are on one line */
+    align-items: center; /* Vertically centers content */
+  }
+  
+  /* Icon on the left for all inputs */
+  .input-icon-wrapper i {
+    position: absolute;
+    left: 12px; /* Default left position for all icons */
+    color: var(--bs-secondary-color, #888); /* Use Bootstrap variable for icon color */
+    font-size: 16px;
+    z-index: 2; /* Ensures icon is above the input field */
+  }
+  
+  /* Specific adjustment for the password lock icon for better alignment */
+  .password-input-container .input-icon-wrapper i.bi-lock {
+    left: 10px; /* Shifts the lock icon slightly to the left */
+  }
+  
+  .input-icon-wrapper input {
+    width: 100%;
+    padding: 12px 12px 12px 40px; /* Left padding ensures space for the icon */
+    border: 1px solid var(--bs-border-color, #ddd); /* Use Bootstrap variable for border color */
+    border-radius: 8px;
+    font-size: 14px;
+    box-sizing: border-box; /* Ensures padding and border are included in the element's total width and height */
+    background-color: var(--bs-body-bg, #fff);
+    color: var(--bs-body-color, #333);
+    transition: all 0.3s ease;
+  }
+  
+  .input-icon-wrapper input:focus {
+    border-color: var(--bs-dark, #000); /* Sets the solid black border */
+    box-shadow: 0 0 0 3px rgba(0, 0, 0, 0.1),
+      /* Your desired translucent shadow */ 0 0 0 1px var(--bs-dark, #000); /* Adds a thin, sharp black outline */
+    outline: none; /* Crucial: removes the browser's default outline */
+  }
+  
+  /* Specific adjustments for password inputs (right-aligned toggle icon) */
+  .password-input-container .input-icon-wrapper input {
+    padding-right: 40px; /* Makes space for the eye icon on the right */
+  }
+  
+  .password-toggle {
+    position: absolute;
+    right: 30px; /* Adjusted value: moves the icon further from the right edge (to the left) */
+    top: 50%;
+    transform: translateY(-50%); /* Vertically centers the icon */
+    cursor: pointer;
+    color: var(--bs-secondary-color, #888); /* Icon color */
+    font-size: 16px;
+    line-height: 1; /* Ensures icon is not cut off */
+    padding: 5px; /* Adds a larger clickable area around the icon */
+    z-index: 3; /* Ensures toggle is above the input */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: color 0.2s ease; /* Smooth color change on hover */
+  }
+  
+  .password-toggle:hover {
+    color: var(--bs-dark-secondary-color, #555); /* Darker color on hover */
+  }
+  .btn-primary {
+    background-color: #000 !important; /* Black background */
+    border-color: #000 !important; /* Black border */
+    color: #fff !important; /* White text for contrast */
+    transition: background-color 0.3s ease, border-color 0.3s ease,
+      color 0.3s ease; /* Smooth transition for hover */
+  }
+  
+  .btn-primary:hover {
+    background-color: #343a40 !important; /* Dark gray for hover */
+    border-color: #343a40 !important;
+    color: #bbbbbb !important; /* Lighter black text on hover */
+  }
+  
+  /* Style for the "Log in here" link */
+  .login-link {
+    color: var(--bs-dark) !important; /* Black text for the link */
+    transition: color 0.3s ease; /* Smooth transition for hover */
+  }
+  
+  .login-link:hover {
+    color: var(--custom-link-hover) !important; /* Suitable hover color */
+  }

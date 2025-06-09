@@ -1522,7 +1522,6 @@
     box-sizing: border-box;
   }
 
-  /* Enhanced handling for blocked users list */
   .blocked-rejected-tab {
     padding-left: 5px;
     padding-right: 5px;
@@ -1544,15 +1543,13 @@
     margin-right: 0;
   }
 
-  /* Prevent images from causing overflow */
   .avatar {
     max-width: 40px;
     height: auto;
   }
 
-  /* More aggressive text truncation */
   .item-details {
-    max-width: calc(100% - 100px); /* Adjust based on your layout */
+    max-width: calc(100% - 100px); 
   }
 
   .item-name, .item-date {
@@ -1563,16 +1560,44 @@
     max-width: 100%;
   }
 
-  /* Ensure buttons don't push content out */
   .action-btn {
-    max-width: 80px; /* Adjust as needed */
+    max-width: 80px; 
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
   }
 
-  /* Add this if you still see overflow */
   * {
     max-width: 100%;
+  }
+}
+@media (max-width: 768px) {
+  .app-header {
+    padding: 10px 10px;
+  }
+
+  .left-section .app-name {
+    display: none; 
+  }
+
+  .middle-section {
+    flex: 1; 
+    margin: 0 10px;
+    display: block !important;
+  }
+
+  .search-button {
+    display: none; 
+  }
+
+  .search-input {
+    width: 100%;
+    padding: 8px 12px;
+    font-size: 14px;
+  }
+
+  .app-logo {
+    height: 30px;
+    width: 30px;
   }
 }

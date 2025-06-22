@@ -2556,3 +2556,89 @@ app-header {
       max-width: 95%; /* Make it almost full width on very small screens */
   }
 }
+/* Ensure the message bubble itself will clip content if it overflows */
+.message-bubble {
+  max-width: 100%; /* Important: ensure the bubble doesn't try to be wider than its container */
+  overflow: hidden; /* This is key: Hides content that overflows the bubble horizontally */
+  word-wrap: break-word; /* Helps with long text content */
+  overflow-wrap: break-word; /* Modern equivalent for word-wrap */
+}
+
+/* Make sure the content wrapper also respects its parent's width */
+.message-content-wrapper {
+  max-width: 100%;
+  /* If this also needs to hide overflow, uncomment: */
+  /* overflow: hidden; */
+}
+
+/* General styling for attachments container within the bubble */
+.message-attachments {
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  hyphens: auto;
+  max-width: 100%; /* Ensure attachment area itself doesn't exceed bubble width */
+  box-sizing: border-box; /* Include padding/border in the element's total width/height */
+}
+
+/* Specific styling for each attachment item */
+.attachment-item {
+  margin-bottom: 5px;
+  max-width: 100%; /* Ensure each item respects parent width */
+  box-sizing: border-box;
+}
+
+/* --- Images and Videos --- */
+.message-attachments img,
+.message-attachments video {
+  display: block;
+  max-width: 200px; /* Adjust this to your desired max size */
+  max-height: 150px; /* Adjust this to your desired max size */
+  width: auto; /* Allow natural width up to max-width */
+  height: auto; /* Maintain aspect ratio */
+  object-fit: contain; /* Ensures the whole image/video is visible within its bounds */
+  border-radius: 5px; /* Added for consistency, if you want rounded corners */
+}
+
+/* --- Specific Styling for File Attachments (non-image/video) --- */
+.attachment-item .d-flex.align-items-center {
+  background-color: rgba(
+    0,
+    0,
+    0,
+    0.1
+  ); /* A subtle background to make it stand out */
+  padding: 5px 8px; /* Some padding around the content */
+  border-radius: 5px; /* Slightly rounded corners */
+  margin-top: 5px; /* Space from message content above it */
+  max-width: 100%; /* Crucial: Ensure this div fits within the parent */
+  box-sizing: border-box; /* Include padding/border in element's total width/height */
+  overflow: hidden; /* Hide any overflowing content for the filename */
+  text-overflow: ellipsis; /* Add ellipsis for overflowing text */
+  white-space: nowrap; /* Prevent text from wrapping initially */
+  display: flex; /* Keep it as flex for icon and text alignment */
+  align-items: center; /* Re-align items if display changes */
+}
+
+.attachment-item .d-flex.align-items-center a {
+  flex-grow: 1; /* Allow the link to take up available space */
+  min-width: 0; /* Allows content to shrink below its intrinsic size in flexbox */
+  text-overflow: ellipsis;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+/* Color Adjustment for Sender's Bubble */
+.message-bubble.bg-primary .attachment-item .d-flex.align-items-center a,
+.message-bubble.bg-primary .attachment-item .d-flex.align-items-center i {
+  color: #fff; /* Ensure text and icon are white for contrast on primary background */
+  text-decoration: underline; /* Make it clear it's a link */
+}
+
+.message-bubble.bg-primary .attachment-item .d-flex.align-items-center {
+  background-color: rgba(
+    255,
+    255,
+    255,
+    0.2
+  ); /* Lighter background for sender's attachment box */
+}

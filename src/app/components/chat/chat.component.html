@@ -712,6 +712,58 @@
                     </p>
 
                     <div
+                      *ngIf="
+                        message.attachments && message.attachments.length > 0
+                      "
+                      class="message-attachments mt-2"
+                    >
+                      <div
+                        *ngFor="let attachment of message.attachments"
+                        class="attachment-item mb-1"
+                      >
+                      <ng-container [ngSwitch]="(attachment.fileType || '').split('/')[0]">
+                        <img
+                            *ngSwitchCase="'image'"
+                            [src]="imageBaseUrl + attachment.fileUrl"
+                            [alt]="attachment.fileName"
+                            class="img-fluid rounded"
+                            style="
+                              max-width: 200px;
+                              max-height: 200px;
+                              object-fit: contain;
+                            "
+                          />
+                          <video
+                            *ngSwitchCase="'video'"
+                            controls
+                            [src]="imageBaseUrl + attachment.fileUrl"
+                            style="max-width: 250px; max-height: 200px"
+                            class="rounded"
+                          >
+                            Your browser does not support the video tag.
+                          </video>
+                          <div
+                            *ngSwitchDefault
+                            class="d-flex align-items-center"
+                          >
+                            <i
+                              class="bi bi-file-earmark me-2"
+                              style="font-size: 1.5rem"
+                            ></i>
+                            <a
+                              [href]="imageBaseUrl + attachment.fileUrl"
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              [download]="attachment.fileName"
+                              class="text-decoration-none"
+                            >
+                              {{ attachment.fileName }}
+                            </a>
+                          </div>
+                        </ng-container>
+                      </div>
+                    </div>
+                    <div
                       class="message-actions position-absolute top-0 end-0 p-1 bg-light rounded-pill shadow-sm"
                       [class.show-actions]="
                         hoveredMessageId === message.id ||
@@ -722,11 +774,9 @@
                         class="btn btn-sm btn-outline-secondary py-0 px-1"
                         [class.me-1]="
                           (message.senderId === currentUserId &&
-                            !message.isSystemMessage &&
-                            !(
-                              message.attachments &&
-                              message.attachments.length > 0
-                            )) ||
+                            (message.content ||
+                              (message.attachments &&
+                                message.attachments.length > 0))) ||
                           message.senderId === currentUserId ||
                           isCurrentUserChatAdmin(activeChat)
                         "
@@ -740,10 +790,7 @@
                         *ngIf="
                           message.senderId === currentUserId &&
                           !message.isSystemMessage &&
-                          !(
-                            message.attachments &&
-                            message.attachments.length > 0
-                          )
+                          message.content
                         "
                         class="btn btn-sm btn-outline-secondary py-0 px-1"
                         [class.me-1]="

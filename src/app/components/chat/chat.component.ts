@@ -415,6 +415,8 @@ export class ChatComponent implements OnInit, OnDestroy, AfterViewChecked {
         }
 
         const chatIndex = this.chats.findIndex(c => c.id === message.chatId);
+        console.log(message);
+        
         if (chatIndex !== -1) {
           const chatToUpdate = this.chats[chatIndex];
           if (!chatToUpdate.messages) {
@@ -709,6 +711,7 @@ export class ChatComponent implements OnInit, OnDestroy, AfterViewChecked {
       }
     }
   }
+  
   onMessageHover(messageId: number): void {
     this.hoveredMessageId = messageId;
   }
@@ -1186,7 +1189,6 @@ export class ChatComponent implements OnInit, OnDestroy, AfterViewChecked {
     this.typingActivitySubject.next();
   }
 
-
   ngAfterViewChecked(): void {
     if (this.scrollContainer && !this.initialMessageLoadDone && this.activeChat && this.activeChat.messages && this.activeChat.messages.length > 0) {
       this.scrollToBottom();
@@ -1661,7 +1663,6 @@ export class ChatComponent implements OnInit, OnDestroy, AfterViewChecked {
     }
   }
 
-
   handleSendMessage(): void {
     if (!this.activeChat?.id) {
       console.error('No active chat selected. Cannot send message.');
@@ -1710,6 +1711,7 @@ export class ChatComponent implements OnInit, OnDestroy, AfterViewChecked {
     
     console.log('Message sent. Input fields and attachments cleared. Emoji picker closed.');
   }
+
   selectChat(chatId: number): void {
     console.log(this.isVisible);
 
@@ -1945,6 +1947,7 @@ export class ChatComponent implements OnInit, OnDestroy, AfterViewChecked {
     }
     return 'bi bi-file-earmark';
   }
+
   scrollToBottom(): void {
     if (this.scrollContainer) {
       try {
@@ -1957,6 +1960,7 @@ export class ChatComponent implements OnInit, OnDestroy, AfterViewChecked {
       }
     }
   }
+
   onScroll(event: Event): void {
     const element = event.target as HTMLElement;
 
@@ -1966,6 +1970,7 @@ export class ChatComponent implements OnInit, OnDestroy, AfterViewChecked {
       this.loadMoreMessages();
     }
   }
+
   removeAttachment(attachmentToRemove: FileAttachmentCreate): void {
     if (attachmentToRemove.fileUrl) {
       URL.revokeObjectURL(attachmentToRemove.fileUrl);
@@ -1979,6 +1984,7 @@ export class ChatComponent implements OnInit, OnDestroy, AfterViewChecked {
     }
     console.log('Attachment removed. Current attachments:', this.attachments);
   }
+
   getOtherParticipantUsername(chat: Chat): string {
     if (!chat || chat.isGroup || !this.currentUserId) {
       return '';
@@ -1987,6 +1993,7 @@ export class ChatComponent implements OnInit, OnDestroy, AfterViewChecked {
 
     return otherParticipant ? otherParticipant.username : 'Unknown User';
   }
+
   isCurrentUserChatCreator(chat: Chat): boolean {
     if (!chat || !this.currentUserId) {
       return false;
@@ -1996,6 +2003,7 @@ export class ChatComponent implements OnInit, OnDestroy, AfterViewChecked {
     }
     return chat.createdByUserId === this.currentUserId;
   }
+
   isCurrentUserRejectedInitiator(chat: Chat): boolean {
     if (!chat || !chat.participants || chat.status !== ChatStatus.Rejected) {
       return false;
